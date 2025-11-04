@@ -1,13 +1,118 @@
 # streamlit_app.py
 # HR Co-Pilot – 6 High-Impact Agents (Individual + Team Attrition)
+# Airbus-styled dark blue & white theme
 # Built for Airbus HR Pod on GCP (Vertex AI + BigQuery + Looker)
 import streamlit as st
 import pandas as pd
 import random
 
+# ─────────────────── PAGE CONFIG ───────────────────
 st.set_page_config(page_title="HR Co-Pilot – 6 Agents", layout="wide")
-st.title("HR Co-Pilot – Airbus HR Agents (GCP HR Pod)")
-st.caption("Powered by Vertex AI, BigQuery & Looker Studio | Demo by Doanh Pham")
+
+# ─────────────────── CUSTOM CSS (Airbus Theme) ───────────────────
+st.markdown("""
+    <style>
+    /* GLOBAL */
+    body {
+        background-color: #0a2342; /* Airbus deep navy */
+        color: white;
+        font-family: "Helvetica Neue", sans-serif;
+    }
+    section.main > div {
+        background-color: #0a2342;
+    }
+
+    /* TITLE */
+    h1, h2, h3 {
+        color: #ffffff !important;
+        font-weight: 600;
+    }
+    .stApp {
+        background-color: #0a2342;
+        color: white;
+    }
+
+    /* METRIC BOXES */
+    [data-testid="stMetricValue"] {
+        color: #1e90ff !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stMetricDelta"] {
+        color: #add8e6 !important;
+    }
+
+    /* BUTTONS */
+    div.stButton > button {
+        background-color: #1e90ff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 0.5em 1em;
+        transition: 0.3s;
+    }
+    div.stButton > button:hover {
+        background-color: #0078d7;
+        color: #fff;
+        transform: scale(1.02);
+    }
+
+    /* TEXT INPUTS */
+    textarea, input[type="text"], select {
+        background-color: #ffffff;
+        color: #000000;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        padding: 0.4em;
+    }
+
+    /* TABS */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #102a54;
+        border-radius: 8px;
+        color: #ffffff !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #0a2342;
+        color: #ffffff !important;
+    }
+    .stTabs [aria-selected="true"] {
+        border-bottom: 3px solid #1e90ff !important;
+        font-weight: 600;
+    }
+
+    /* SUCCESS, WARNING, ERROR COLORS */
+    .stAlert {
+        border-radius: 8px;
+        padding: 1em;
+    }
+    .stAlert[data-baseweb="alert"] div p {
+        font-weight: 500;
+    }
+    .stAlert[data-baseweb="alert"][class*="success"] {
+        background-color: #003366 !important;
+        color: #ccf2ff !important;
+    }
+    .stAlert[data-baseweb="alert"][class*="warning"] {
+        background-color: #334d66 !important;
+        color: #ffeb99 !important;
+    }
+    .stAlert[data-baseweb="alert"][class*="error"] {
+        background-color: #4d2f36 !important;
+        color: #ffb3b3 !important;
+    }
+
+    /* CAPTION / FOOTER */
+    footer, .stCaption, .css-1lsmgbg {
+        color: #a0c4ff;
+        text-align: center;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# ─────────────────── HEADER ───────────────────
+st.title("✈️ HR Co-Pilot – Airbus HR Agents (GCP HR Pod)")
+st.caption("Powered by Vertex AI • BigQuery • Looker Studio | Demo by Doanh Pham")
 
 # ─────────────────── MOCK DATA ───────────────────
 employees = pd.DataFrame([
@@ -133,4 +238,4 @@ with tabs[5]:
     st.metric("Tickets Deflected", "88%")
 
 st.markdown("---")
-st.caption("Demo: 6 HR AI Agents | Built for Airbus HR Pod | Vertex AI + BigQuery | © 2025 Doanh Pham")
+st.caption("Demo: 6 HR AI Agents | Airbus HR Pod | Vertex AI + BigQuery | © 2025 Doanh Pham")
