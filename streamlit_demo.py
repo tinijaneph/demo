@@ -1,110 +1,112 @@
-# streamlit_app.py  ← COPY-PASTE THIS ENTIRE FILE
+# streamlit_app.py
+# HR Co-Pilot – 5 High-Impact GCP Agents
+# Built for HR domain pilot (Vertex AI + BigQuery foundation)
 import streamlit as st
 import pandas as pd
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
-st.set_page_config(page_title="HR Co-Pilot – GCP PDF", layout="wide")
-st.title("HR Co-Pilot – 7 Agents EXACTLY as in our GCP PDF")
-st.markdown("**Page 2 → 7 live tabs | Auto-actions | 14-day MVP | Zero cost**")
+st.set_page_config(page_title="HR Co-Pilot – 5 Agents", layout="wide")
+st.title("HR Co-Pilot – 5 High-Impact Agents (GCP HR Pod)")
+st.caption("Powered by Vertex AI, BigQuery & Looker Studio | Demo by Doanh Pham")
 
-# MOCK DATA (replace with BigQuery later)
+# ─────────────────── MOCK DATA ───────────────────
 employees = pd.DataFrame([
-    {"id": "E12345", "name": "Maya Chen",    "dept": "Sales",     "tenure":14, "rating":4.2, "ot":28,  "risk":78,  "email":"maya@company.com"},
-    {"id": "E12346", "name": "Liam Park",    "dept": "Eng",       "tenure":36, "rating":4.8, "ot":12,  "risk":22,  "email":"liam@company.com"},
-    {"id": "E12347", "name": "Sofia Patel",   "dept": "Finance",   "tenure":8,  "rating":3.1, "ot":65,  "risk":91,  "email":"sofia@company.com"},
+    {"id": "E101", "name": "Maya Chen", "dept": "Sales", "tenure": 14, "rating": 4.2, "ot": 28, "risk": 78, "sentiment": 0.42},
+    {"id": "E102", "name": "Liam Park", "dept": "Engineering", "tenure": 36, "rating": 4.8, "ot": 12, "risk": 22, "sentiment": 0.81},
+    {"id": "E103", "name": "Sofia Patel", "dept": "Finance", "tenure": 8, "rating": 3.1, "ot": 65, "risk": 91, "sentiment": 0.33},
 ])
-courses = ["SQL for HR", "Vertex AI Basics", "People Analytics 101"]
-mentors = ["Sarah", "Raj", "Ana"]
+courses = ["People Analytics 101", "Vertex AI for HR", "Data Storytelling for Leaders"]
+policies = {
+    "vacation": "Employees are entitled to 20 days of paid vacation annually.",
+    "parental": "14 weeks fully paid parental leave + 4 weeks flexible option.",
+    "remote": "Hybrid policy: minimum 2 days in office; flexible Fridays.",
+    "benefits": "Health, dental, vision, 401k matching, and annual wellness stipend."
+}
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-    "1. Attrition Prediction",      # ← PDF exact
-    "2. Time Tracking",             # ← PDF exact
-    "3. Performance Trend",         # ← PDF exact
-    "4. Training Matcher",          # ← PDF exact
-    "5. Sentiment Monitor",         # ← PDF exact
-    "6. Policy & Benefits Bot",     # ← you asked
-    "7. Workforce Planner"          # ← you asked
+# ─────────────────── TABS ───────────────────
+tabs = st.tabs([
+    "1️⃣ Attrition Prediction",
+    "2️⃣ Sentiment & Engagement",
+    "3️⃣ Time & Workforce Analytics",
+    "4️⃣ Training & Development Recommender",
+    "5️⃣ HR Policy & Benefits Copilot"
 ])
 
-# ── 1. ATTRITION PREDICTION (PDF Page 2) ───────────────────────
-with tab1:
+# ── 1️⃣ ATTRITION PREDICTION ─────────────────────────
+with tabs[0]:
     st.header("Agent 1: Attrition Prediction")
-    st.write("Predict which employees are at risk of leaving")
-    emp = st.selectbox("Employee", employees["id"]+" – "+employees["name"], key="a")
-    if st.button("Run Prediction", key="a1"):
-        row = employees[employees["id"] == emp.split()[0]].iloc[0]
-        risk = row["risk"] + random.randint(-7,9)
-        st.session_state.risk = risk
-        st.metric("Flight Risk", f"{risk}%", delta=f"{random.choice(['-12%','+5%'])}")
-        
-        actions = ["1:1 coffee chat (auto-booked)", "$500 Learning budget", "Mentor matched"]
-        st.session_state.actions = actions
-        
-        if st.button("Execute 3-Click Retention Plan", key="a2"):
-            st.success(f"Retention executed for {row['name']}!\n" + "\n".join(actions))
-            st.balloons()
+    st.write("Predict which employees are most likely to leave and why.")
+    emp = st.selectbox("Select Employee", employees["name"], key="attrition")
+    if st.button("Run Prediction", key="attr_btn"):
+        row = employees[employees["name"] == emp].iloc[0]
+        risk = row["risk"] + random.randint(-5, 5)
+        st.metric("Attrition Risk", f"{risk}%", delta=f"{random.choice(['+3%', '-2%', '+6%'])}")
+        if risk > 70:
+            st.warning(f"⚠️ High risk detected for {emp}. Recommended: career chat, mentor match, learning incentive.")
+        else:
+            st.success(f"{emp} shows stable retention outlook.")
+        st.bar_chart({"Performance": row["rating"]*20, "Engagement": row["sentiment"]*100, "Tenure": row["tenure"]})
 
-# ── 2. TIME TRACKING / WORKFORCE ACTIVITY ───────────────────────
-with tab2:
-    st.header("Agent 2: Time Tracking / Workforce Activity")
-    st.write("Analyze time-tracking, absenteeism, overwork patterns")
-    emp = st.selectbox("Pick", employees["id"]+" – "+employees["name"], key="t")
-    if st.button("Weekly Report", key="t1"):
-        row = employees[employees["id"] == emp.split()[0]].iloc[0]
-        st.metric("Overtime", f"{row.ot} hrs", "↑12 vs avg")
-        st.bar_chart({"Mon":8, "Tue":10, "Wed":9, "Thu":12, "Fri":6})
-        st.warning("Fatigue index: HIGH → Auto-rest days suggested")
+# ── 2️⃣ SENTIMENT & ENGAGEMENT MONITOR ─────────────────────────
+with tabs[1]:
+    st.header("Agent 2: Sentiment & Engagement Monitor")
+    st.write("Use NLP to analyze employee sentiment from surveys or feedback.")
+    comment = st.text_area("Paste a recent myPulse comment:", "Feeling burned out lately with extra hours.")
+    if st.button("Analyze Sentiment", key="sentiment"):
+        score = random.randint(45, 90)
+        st.metric("Sentiment Score", f"{score}%", delta=f"{random.choice(['+4%', '-6%'])}")
+        if score < 60:
+            st.error("Negative sentiment detected → Notify HR Business Partner.")
+        elif score < 75:
+            st.warning("Neutral to mixed tone → Recommend pulse follow-up survey.")
+        else:
+            st.success("Positive sentiment detected.")
+        st.line_chart([random.randint(40, 85) for _ in range(6)])
 
-# ── 3. PERFORMANCE TREND ANALYZER ───────────────────────
-with tab3:
-    st.header("Agent 3: Performance Trend Analyzer")
-    st.write("Identify high/low performance drivers")
-    emp = st.selectbox("Employee", employees["id"]+" – "+employees["name"], key="p")
-    if st.button("Show Drivers", key="p1"):
-        row = employees[employees["id"] == emp.split()[0]].iloc[0]
-        st.metric("Performance Score", f"{row.rating*20:.0f}%")
-        st.bar_chart({"Goals":90, "Feedback":row.rating*20, "Output":85})
+# ── 3️⃣ TIME & WORKFORCE ANALYTICS ─────────────────────────
+with tabs[2]:
+    st.header("Agent 3: Time & Workforce Analytics")
+    st.write("Monitor overtime, fatigue, and absenteeism trends.")
+    emp = st.selectbox("Choose Employee", employees["name"], key="time")
+    if st.button("Generate Report", key="time_btn"):
+        row = employees[employees["name"] == emp].iloc[0]
+        st.metric("Overtime Hours (This Month)", f"{row['ot']} hrs", "↑5h vs last month")
+        if row["ot"] > 40:
+            st.warning("⚠️ Fatigue risk detected → Recommend auto-rest scheduling.")
+        else:
+            st.success("Workload normal range.")
+        st.bar_chart({"Week1": 8, "Week2": 12, "Week3": 10, "Week4": 6})
 
-# ── 4. TRAINING & DEVELOPMENT MATCHER ───────────────────────
-with tab4:
-    st.header("Agent 4: Training & Development Matcher")
-    st.write("Recommend learning paths or mentorships")
-    goal = st.text_input("Next role", "People Analytics Lead", key="m")
-    if st.button("Generate Plan", key="m1"):
-        st.success("Personalized suggestions")
-        for c in random.sample(courses, 2): st.write(f"{c} – [Enrol]")
-        st.write("Mentor: Sarah – [Book 15-min]")
+# ── 4️⃣ TRAINING & DEVELOPMENT RECOMMENDER ─────────────────────────
+with tabs[3]:
+    st.header("Agent 4: Training & Development Recommender")
+    st.write("Recommend personalized learning and mentorship options.")
+    goal = st.text_input("Career goal / next role:", "People Analytics Lead")
+    if st.button("Generate Development Plan", key="train_btn"):
+        recs = random.sample(courses, 2)
+        st.success(f"Recommended learning for '{goal}'")
+        for r in recs:
+            st.write(f"📘 {r} – [Enroll]")
+        st.write(f"👥 Mentor matched: {random.choice(['Sarah', 'Raj', 'Ana'])}")
 
-# ── 5. SENTIMENT & ENGAGEMENT MONITOR ───────────────────────
-with tab5:
-    st.header("Agent 5: Sentiment & Engagement Monitor")
-    st.write("Track employee sentiment from surveys")
-    text = st.text_area("myPulse comment", "Burnt out on overtime", key="s")
-    if st.button("Analyze", key="s1"):
-        score = random.randint(58,88)
-        st.metric("Engagement", f"{score}%", "↓8%")
-        st.error("Burnout rising → Alert VP People")
+# ── 5️⃣ HR POLICY & BENEFITS COPILOT ─────────────────────────
+with tabs[4]:
+    st.header("Agent 5: HR Policy & Benefits Copilot")
+    st.write("Ask questions about HR policies and get instant, compliant answers.")
+    q = st.text_input("Ask HR Copilot", "How much parental leave do we have?")
+    if st.button("Get Answer", key="policy_btn"):
+        found = None
+        for k, v in policies.items():
+            if k in q.lower():
+                found = v
+                break
+        if found:
+            st.success(found)
+        else:
+            st.info("Policy not found – forwarding to HR shared inbox.")
+    st.metric("Response Accuracy (Pilot)", "93%")
+    st.metric("Tickets Deflected", "88%")
 
-# ── 6. POLICY & BENEFITS BOT (you asked) ───────────────────────
-with tab6:
-    st.header("Agent 6: Policy & Benefits Bot")
-    st.write("94% of questions answered in 0.8s")
-    q = st.text_input("Ask HR", "How much paternity leave?", key="pb")
-    if st.button("Answer + Email", key="pb1"):
-        st.success("14 weeks fully paid + 4 weeks flexible")
-        st.metric("Tickets deflected", "94%")
-        if st.button("Email Manager", key="pb2"):
-            st.success("Policy email sent with handbook link")
-
-# ── 7. WORKFORCE PLANNER (you asked) ───────────────────────
-with tab7:
-    st.header("Agent 7: Workforce Planner")
-    st.write("500% ROI on scheduling")
-    dept = st.selectbox("Dept", ["Sales", "Engineering", "Finance"], key="wp")
-    if st.button("Optimise Next Month", key="wp1"):
-        st.metric("Overtime reduced", "42 hrs → 12 hrs")
-        st.bar_chart({"Mon":8, "Tue":7, "Wed":8, "Thu":6, "Fri":4})
-        st.info("Auto-schedule emailed to managers")
-
-st.caption("Built by [Your Name] | 100% matches GCP PDF Page 2 | 7 agents, 1 project | Week-6 demo ready")
+st.markdown("---")
+st.caption("Demo: 5 HR AI Agents | Built for GCP Vertex AI + BigQuery pilot | © 2025 Doanh Pham")
