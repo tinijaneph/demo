@@ -1,56 +1,58 @@
+# streamlit_app.py
 import streamlit as st
 import pandas as pd
 import random
 from datetime import datetime
-st.set_page_config(page_title="HR Agent Showdown", layout="wide")
 
-# ===== REAL 2025 BENCHMARKS =====
-benchmarks = pd.DataFrame([
-    {"Company": "IBM AskHR",        "Agent": "Policy & Benefits Bot", "ROI": "94% auto-answers → 75% fewer tickets", "Effort": 2, "Impact": 5},
-    {"Company": "PepsiCo",          "Agent": "Hiring Assistant",     "ROI": "30% faster recruiter time", "Effort": 3, "Impact": 5},
-    {"Company": "Unilever",         "Agent": "Skills-to-Course Matcher", "ROI": "40% upskill completion", "Effort": 2, "Impact": 4},
-    {"Company": "UKG Bryte AI",     "Agent": "Workforce Planner",    "ROI": "500% ROI on scheduling", "Effort": 4, "Impact": 5},
-    {"Company": "ACCIONA",          "Agent": "Payroll Chatbot",      "ROI": "24/7 self-service", "Effort": 1, "Impact": 3},
-    {"Company": "Hitachi",          "Agent": "Onboarding Guide",     "ROI": "30% faster ramp-up", "Effort": 2, "Impact": 4},
-    {"Company": "Indicium",         "Agent": "Turnover Forecaster",  "ROI": "45% margin gain", "Effort": 3, "Impact": 5},
-    {"Company": "Our POD 🔥",       "Agent": "YOUR 1st Agent",       "ROI": "Coming in 14 days!", "Effort": 1, "Impact": 5},
+st.set_page_config(page_title="HR Co-Pilot", layout="wide")
+st.title("HR Co-Pilot – LIVE in our GCP POD")
+st.markdown("**Zero cost | 2 agents | 14-day MVP**")
+
+# MOCK DATA (replace later with real BQ)
+employees = pd.DataFrame([
+    {"emp_id": "E12345", "name": "Maya Chen", "tenure_months": 14, "last_rating": 4.2, "overtime_hrs": 28, "risk": 78},
+    {"emp_id": "E12346", "name": "Liam Park", "tenure_months": 36, "last_rating": 4.8, "overtime_hrs": 12, "risk": 22},
+    {"emp_id": "E12347", "name": "Sofia Patel", "tenure_months": 8, "last_rating": 3.1, "overtime_hrs": 65, "risk": 91},
 ])
 
-tab1, tab2, tab3, tab4 = st.tabs(["🌍 Global Benchmarks", "🎯 Pick Our 2", "⚡ Live Demos", "📄 Export Proposal"])
+courses = ["SQL for HR", "People Analytics 101", "Vertex AI Basics", "Predictive HR"]
+mentors = ["Sarah (HR Tech Lead)", "Raj (Data Science)", "Ana (L&D Director)"]
+
+tab1, tab2, tab3 = st.tabs(["Attrition Radar", "Skill Spark", "ROI Calculator"])
 
 with tab1:
-    st.header("8 Agents Already Saving Millions")
-    for _, row in benchmarks.iterrows():
-        cols = st.columns([1,3,3,1])
-        cols[0].image(f"https://logo.clearbit.com/{row.Company.lower().replace(' ','')}.com", width=60)
-        cols[1].write(f"**{row.Agent}**")
-        cols[2].success(row.ROI)
-        cols[3].caption(f"Effort: {'🟢'*row.Effort}")
+    st.header("Attrition Radar")
+    emp_id = st.selectbox("Pick an employee", employees["emp_id"] + " – " + employees["name"])
+    if st.button("Run Prediction"):
+        row = employees[employees["emp_id"] == emp_id.split()[0]].iloc[0]
+        risk = row["risk"] + random.randint(-5, 8)
+        st.metric("Flight Risk", f"{risk}%", delta=f"{random.choice(['-12%', '+5%', '-8%'])} vs last month")
+        
+        st.subheader("3 Instant Retention Actions")
+        actions = [
+            "Schedule 1:1 coffee chat (auto-book in Outlook)",
+            "Offer $500 LinkedIn Learning budget",
+            "Fast-track to mentor program"
+        ]
+        for a in actions:
+            st.write(f"→ {a}")
 
 with tab2:
-    st.header("Slide to Choose")
-    impact = st.slider("Max Impact (1-5)", 1, 5, 5)
-    effort = st.slider("Max Effort (1-4)", 1, 4, 2)
-    shortlist = benchmarks[(benchmarks.Impact >= impact) & (benchmarks.Effort <= effort)].sort_values("Impact", ascending=False)
-    st.bar_chart(shortlist.set_index("Agent")["Impact"])
-    st.success(f"🏆 YOUR TOP 2: {shortlist.iloc[0].Agent} + {shortlist.iloc[1].Agent}")
+    st.header("Skill Spark")
+    goal = st.text_input("Your career goal", "Become a People Analytics Lead")
+    if st.button("Generate My 90-Day Path"):
+        st.success("Your Personalized Upskilling Plan")
+        for c in random.sample(courses, 3):
+            st.write(f"Course: {c} – 4 hrs – [Enrol](#)")
+        st.write("**Recommended Mentors**")
+        for m in random.sample(mentors, 2):
+            st.write(f"Mentor: {m} – [Book 15-min intro](#)")
 
 with tab3:
-    st.header("Click Any Agent → Instant Demo")
-    demo = st.selectbox("Try one", benchmarks.Agent)
-    if st.button("Run 5-sec Prediction"):
-        if "Turnover" in demo:
-            st.metric("Maya Chen flight risk", f"{random.randint(72,94)}%", "↑12%")
-            st.balloons()
-        elif "Matcher" in demo:
-            st.write("✅ SQL for HR (4h)  ✅ Vertex AI Basics (6h)  👤 Mentor: Sarah")
-        else:
-            st.write("🎉 94% of your question auto-answered in 0.8s")
+    st.header("Live ROI Calculator")
+    saved = st.slider("Employees you retain", 0, 50, 12)
+    cost_per_hire = st.number_input("Avg replacement cost ($)", 15000, 30000, 20000)
+    st.metric("Year-1 Savings", f"${saved * cost_per_hire:,.0f}")
+    st.balloons()
 
-with tab4:
-    st.header("One-Click Proposal")
-    manager = st.text_input("Manager name", "Alex Rivera")
-    if st.button("Generate PDF"):
-        st.success(f"Proposal sent to {manager}@company.com – includes slides 3-10 + your 2 picks!")
-
-st.caption("Built 100% inside our free GCP POD | Nov 2025 | Zero cost | Ready for Week-6 demo")
+st.caption("Built by [Your Name] | Runs 100% inside our free GCP POD | Ready for Week-6 demo")
