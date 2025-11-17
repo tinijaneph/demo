@@ -1,5 +1,5 @@
 """
-Employee Change Tracker - Complete Implementation
+Employee Change Tracker - Complete Implementation with Append Mode
 Tracks employee data changes with schema evolution support (SCD2 pattern)
 """
 
@@ -9,7 +9,7 @@ from pyspark.sql.window import Window
 from pyspark.sql.types import DateType
 from datetime import datetime
 from typing import List, Set
-from transforms.api import transform_df, Input, Output
+from transforms.api import transform_df, Input, Output, incremental
 
 
 class EmployeeChangeTracker:
@@ -34,24 +34,6 @@ class EmployeeChangeTracker:
         self.note_col = note_col
         self.tracking_columns = {primary_key, effective_date_col, note_col}
         
-    def initialize_historical_data(self, df: DataFrame, 
-                                   effective_date: str = None) -> DataFrame:
-        """
-        Initialize historical tracking for first load.
-        
-        Args:
-            df: Source DataFrame
-            effective_date: Date string (YYYY-MM-DD) or None for today
-            
-        Returns:
-            DataFrame with Effective_Date and Note columns added
-        """
-        if effective_date is None:
-            effective_date = datetime.now().strftime('%Y-%m-%d')
-            
-        return df.withColumn(self.effective_date_col, F.lit(effective_date).cast(DateType())) \
-                 .withColumn(self.note_col, F.lit("Original/1"))
-    
     def _get_data_columns(self, df: DataFrame) -> Set[str]:
         """Get data columns excluding tracking columns."""
         return set(df.columns) - self.tracking_columns
@@ -168,11 +150,12 @@ class EmployeeChangeTracker:
             return new_employees.withColumn(self.note_col, F.lit("New Employee"))
         return new_employees
     
-    def track_changes(self, new_df: DataFrame, 
-                     historical_df: DataFrame,
-                     effective_date: str = None) -> DataFrame:
+    def detect_and_append_changes(self, new_df: DataFrame, 
+                                 historical_df: DataFrame,
+                                 effective_date: str = None) -> DataFrame:
         """
-        Main function to track changes between new and historical data.
+        Detect changes and return ONLY new records to append.
+        This is used with set_mode="append".
         
         Args:
             new_df: New/current employee data (without tracking columns)
@@ -180,7 +163,7 @@ class EmployeeChangeTracker:
             effective_date: Date for new changes (YYYY-MM-DD) or None for today
             
         Returns:
-            Updated DataFrame with all historical records plus new changes
+            DataFrame with ONLY new records to append (not full history)
         """
         if effective_date is None:
             effective_date = datetime.now().strftime('%Y-%m-%d')
@@ -199,14 +182,10 @@ class EmployeeChangeTracker:
         # Get data columns for comparison (excluding tracking columns)
         data_columns = sorted(list(self._get_data_columns(new_df_aligned)))
         
-        # Detect new employees
-        new_employees = self._detect_new_employees(new_df_aligned, historical_df_aligned)
+        # Collect records to append
+        records_to_append = []
         
-        # Detect changed records
-        changed_records = self._detect_changes(new_df_aligned, historical_df_aligned, data_columns)
-        
-        # Handle schema evolution - add new version for all employees if new columns detected
-        schema_change_records = None
+        # 1. Handle schema evolution - add new version for all employees if new columns detected
         if new_columns:
             # Get latest record for each employee
             window_spec = Window.partitionBy(self.primary_key).orderBy(F.desc(self.effective_date_col))
@@ -222,78 +201,71 @@ class EmployeeChangeTracker:
                 self.note_col,
                 F.lit(f"Original/2 - Added columns: {', '.join(new_columns)}")
             )
+            records_to_append.append(schema_change_records)
         
-        # Combine all records
-        result_df = historical_df_aligned
-        
-        if schema_change_records and schema_change_records.count() > 0:
-            result_df = result_df.unionByName(schema_change_records)
-        
+        # 2. Detect new employees
+        new_employees = self._detect_new_employees(new_df_aligned, historical_df_aligned)
         if new_employees.count() > 0:
-            result_df = result_df.unionByName(new_employees)
-            
-        if changed_records.count() > 0:
-            result_df = result_df.unionByName(changed_records)
+            records_to_append.append(new_employees)
         
-        return result_df.drop_duplicates()
+        # 3. Detect changed records
+        changed_records = self._detect_changes(new_df_aligned, historical_df_aligned, data_columns)
+        if changed_records.count() > 0:
+            records_to_append.append(changed_records)
+        
+        # Combine all new records
+        if records_to_append:
+            result = records_to_append[0]
+            for df in records_to_append[1:]:
+                result = result.unionByName(df)
+            return result.drop_duplicates()
+        else:
+            # No changes detected - return empty DataFrame with correct schema
+            return new_df_aligned.filter(F.lit(False))
     
-    def filter_by_date_rules(self, df: DataFrame, 
-                            keep_latest: bool = True,
-                            keep_month_end: bool = True) -> DataFrame:
+    def initialize_historical_data(self, df: DataFrame, 
+                                   effective_date: str = None) -> DataFrame:
         """
-        Filter records based on date rules (month-end and latest date).
+        Initialize historical tracking for first load.
         
         Args:
-            df: DataFrame to filter
-            keep_latest: Keep records with the latest effective date
-            keep_month_end: Keep records at end of month
+            df: Source DataFrame
+            effective_date: Date string (YYYY-MM-DD) or None for today
             
         Returns:
-            Filtered DataFrame
+            DataFrame with Effective_Date and Note columns added
         """
-        conditions = []
-        
-        if keep_month_end:
-            is_month_end = F.expr(f"last_day({self.effective_date_col}) = {self.effective_date_col}")
-            conditions.append(is_month_end)
-        
-        if keep_latest:
-            latest_date = df.agg(F.max(self.effective_date_col)).collect()[0][0]
-            is_latest = F.col(self.effective_date_col) == F.lit(latest_date)
-            conditions.append(is_latest)
-        
-        if conditions:
-            combined_condition = conditions[0]
-            for condition in conditions[1:]:
-                combined_condition = combined_condition | condition
-            return df.filter(combined_condition).drop_duplicates()
-        
-        return df
+        if effective_date is None:
+            effective_date = datetime.now().strftime('%Y-%m-%d')
+            
+        return df.withColumn(self.effective_date_col, F.lit(effective_date).cast(DateType())) \
+                 .withColumn(self.note_col, F.lit("Original/1"))
 
 
 # ============================================================================
-# FOUNDRY TRANSFORM IMPLEMENTATION
+# FOUNDRY TRANSFORM IMPLEMENTATION WITH APPEND MODE
 # ============================================================================
 
+@incremental()
 @transform_df(
     Output("ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"),
     employee_data=Input("ri.foundry.main.dataset.26c1c4e9-6594-4001-8451-9dbc41aee364")
 )
 def compute(employee_data, ctx):
     """
-    Track employee changes with schema evolution support.
+    Track employee changes with schema evolution support using append mode.
     
-    Uses Foundry's previous output to maintain history across runs.
+    The @incremental decorator with set_mode="append" allows accumulating records.
     
     First run: Initialize with employee_data 
-    Subsequent runs: Track changes between employee_data and previous output
+    Subsequent runs: Detect and append only changed records
     
     Args:
         employee_data: Current employee data (your source dataset with 10 columns)
-        ctx: Transform context to access previous output
+        ctx: Transform context
         
     Returns:
-        Updated historical dataset with all changes tracked
+        New records to append to historical dataset
     """
     from pyspark.sql.utils import AnalysisException
     
@@ -304,41 +276,27 @@ def compute(employee_data, ctx):
         note_col="Note"
     )
     
-    # Try to read the previous output of this transform
-    previous_output = None
-    is_first_run = True
-    
+    # Try to read existing historical data
     try:
-        # Read previous output before it gets overwritten
         output_rid = "ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"
-        previous_output = ctx.spark_session.read.format("foundry").load(output_rid)
+        historical_df = ctx.spark_session.read.format("foundry").load(output_rid)
         
-        # Verify it has data and tracking columns
-        if previous_output.count() > 0 and \
-           'Effective_Date' in previous_output.columns and \
-           'Note' in previous_output.columns:
-            is_first_run = False
+        # Check if historical data exists and has tracking columns
+        if historical_df.count() > 0 and \
+           'Effective_Date' in historical_df.columns and \
+           'Note' in historical_df.columns:
+            
+            # Subsequent run - detect and return only changes to append
+            new_records = tracker.detect_and_append_changes(
+                new_df=employee_data,
+                historical_df=historical_df
+            )
+            
+            return new_records
+        else:
+            # Historical exists but is empty - initialize
+            return tracker.initialize_historical_data(employee_data)
             
     except (AnalysisException, Exception):
-        # First run - previous output doesn't exist
-        is_first_run = True
-    
-    # Process based on run type
-    if is_first_run:
         # First run - initialize all records
-        output_df = tracker.initialize_historical_data(employee_data)
-    else:
-        # Subsequent run - track changes
-        output_df = tracker.track_changes(
-            new_df=employee_data,
-            historical_df=previous_output
-        )
-        
-        # Apply date filtering rules
-        output_df = tracker.filter_by_date_rules(
-            output_df,
-            keep_latest=True,
-            keep_month_end=True
-        )
-    
-    return output_df.drop_duplicates()
+        return tracker.initialize_historical_data(employee_data)
