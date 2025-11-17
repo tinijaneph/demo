@@ -243,31 +243,30 @@ class EmployeeChangeTracker:
 
 
 # ============================================================================
-# FOUNDRY TRANSFORM IMPLEMENTATION WITH APPEND MODE
+# FOUNDRY TRANSFORM IMPLEMENTATION - 1 INPUT, 1 OUTPUT
 # ============================================================================
 
-@incremental()
 @transform_df(
     Output("ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"),
     employee_data=Input("ri.foundry.main.dataset.26c1c4e9-6594-4001-8451-9dbc41aee364")
 )
 def compute(employee_data, ctx):
     """
-    Track employee changes with schema evolution support using append mode.
+    Track employee changes with schema evolution support.
     
-    The @incremental decorator with set_mode="append" allows accumulating records.
+    Uses TransformOutput API to read and append to existing output.
     
     First run: Initialize with employee_data 
-    Subsequent runs: Detect and append only changed records
+    Subsequent runs: Read existing output, detect changes, write back all records
     
     Args:
         employee_data: Current employee data (your source dataset with 10 columns)
         ctx: Transform context
         
     Returns:
-        New records to append to historical dataset
+        Complete historical dataset (existing records + new changes)
     """
-    from pyspark.sql.utils import AnalysisException
+    from transforms.api import TransformOutput
     
     # Initialize tracker
     tracker = EmployeeChangeTracker(
@@ -276,27 +275,55 @@ def compute(employee_data, ctx):
         note_col="Note"
     )
     
-    # Try to read existing historical data
+    # Access the output dataset to read existing data
+    output_dataset = ctx.get_output_dataset()
+    
+    # Check if output already has data
     try:
-        output_rid = "ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"
-        historical_df = ctx.spark_session.read.format("foundry").load(output_rid)
+        # Read existing historical data from output
+        historical_output = output_dataset.dataframe()
         
-        # Check if historical data exists and has tracking columns
-        if historical_df.count() > 0 and \
-           'Effective_Date' in historical_df.columns and \
-           'Note' in historical_df.columns:
-            
-            # Subsequent run - detect and return only changes to append
+        hist_count = historical_output.count()
+        has_tracking_cols = 'Effective_Date' in historical_output.columns and \
+                           'Note' in historical_output.columns
+        
+        if hist_count > 0 and has_tracking_cols:
+            # Subsequent run - detect changes
             new_records = tracker.detect_and_append_changes(
                 new_df=employee_data,
-                historical_df=historical_df
+                historical_df=historical_output
             )
             
-            return new_records
+            # Handle schema alignment for union
+            if new_records.count() > 0:
+                # Align schemas before union
+                hist_cols = set(historical_output.columns)
+                new_cols = set(new_records.columns)
+                
+                # Add missing columns to historical with nulls
+                for col in (new_cols - hist_cols):
+                    col_type = new_records.schema[col].dataType
+                    historical_output = historical_output.withColumn(col, F.lit(None).cast(col_type))
+                
+                # Add missing columns to new records with nulls
+                for col in (hist_cols - new_cols):
+                    col_type = historical_output.schema[col].dataType
+                    new_records = new_records.withColumn(col, F.lit(None).cast(col_type))
+                
+                # Ensure same column order
+                all_cols = sorted(list(hist_cols | new_cols))
+                historical_output = historical_output.select(all_cols)
+                new_records = new_records.select(all_cols)
+                
+                # Union historical with new changes
+                return historical_output.unionByName(new_records).drop_duplicates()
+            else:
+                # No changes - return historical as-is
+                return historical_output
         else:
-            # Historical exists but is empty - initialize
+            # First run or empty historical - initialize
             return tracker.initialize_historical_data(employee_data)
             
-    except (AnalysisException, Exception):
-        # First run - initialize all records
+    except Exception:
+        # First run - output doesn't exist yet
         return tracker.initialize_historical_data(employee_data)
