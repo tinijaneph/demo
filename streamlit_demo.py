@@ -16,11 +16,19 @@ if 'region' not in st.session_state:
 # ADD THIS - Landing Page CSS
 HUB_CSS = """
 <style>
+    /* Remove Streamlit's default padding */
+    .main .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+        max-width: 100% !important;
+    }
+    
     .landing-container {
-        min-height: 100vh;
+        min-height: auto;  /* Changed from 100vh */
         background: radial-gradient(ellipse at top, #2f4156 0%, #1a2942 50%, #0f1419 100%);
-        padding: 2rem;
+        padding: 2rem 2rem 4rem 2rem;  /* Added bottom padding */
         position: relative;
+        margin: -1rem -1rem 0 -1rem;  /* Negative margins to extend to edges */
     }
     
     .mesh-gradient {
@@ -36,13 +44,14 @@ HUB_CSS = """
     
     .landing-header {
         text-align: center;
-        margin-bottom: 4rem;
+        margin-bottom: 3rem;  /* Reduced from 4rem */
         position: relative;
         z-index: 10;
+        padding-top: 2rem;  /* Added padding at top */
     }
     
     .landing-title {
-        font-size: 4.5rem;
+        font-size: 3.5rem;  /* Slightly smaller for better fit */
         font-weight: 200;
         color: #ffffff;
         margin-bottom: 1rem;
