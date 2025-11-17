@@ -247,24 +247,27 @@ class EmployeeChangeTracker:
 # ============================================================================
 
 @transform_df(
-    Output("ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d", set_mode="append"),
+    Output("ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"),
     employee_data=Input("ri.foundry.main.dataset.26c1c4e9-6594-4001-8451-9dbc41aee364")
 )
 def compute(employee_data, ctx):
     """
     Track employee changes with schema evolution support using append mode.
     
-    With set_mode="append", this function returns ONLY new records to append.
+    Uses df.set_mode("append") to append records.
     
-    First run: Initialize with all employee_data records
-    Subsequent runs: Return ONLY detected changes to append
+    Strategy:
+    - First run: Initialize with "Original/1" (snapshot mode)
+    - Value changes: Append changed records (append mode)
+    - New columns: Append "Original/2" records with new column values (append mode)
+      Old records will have NULL for new columns automatically
     
     Args:
         employee_data: Current employee data (your source dataset with 10 columns)
         ctx: Transform context
         
     Returns:
-        New records to append (not full history)
+        DataFrame with set_mode configured
     """
     # Initialize tracker
     tracker = EmployeeChangeTracker(
@@ -283,33 +286,71 @@ def compute(employee_data, ctx):
                            'Note' in historical_output.columns
         
         if hist_count > 0 and has_tracking_cols:
-            # Subsequent run - detect and return ONLY changes to append
-            new_records = tracker.detect_and_append_changes(
-                new_df=employee_data,
-                historical_df=historical_output
-            )
+            # Subsequent run - check for schema changes
+            existing_data_cols = set(historical_output.columns) - {'Employee_ID', 'Effective_Date', 'Note'}
+            new_data_cols = set(employee_data.columns) - {'Employee_ID'}
             
-            # Handle schema evolution: ensure new records match existing schema
-            if new_records.count() > 0:
-                existing_cols = set(historical_output.columns)
-                new_cols = set(new_records.columns)
+            new_columns = new_data_cols - existing_data_cols
+            
+            if new_columns:
+                # NEW COLUMNS DETECTED - Append "Original/2" records
+                # Get latest record for each employee from historical data
+                window_spec = Window.partitionBy('Employee_ID').orderBy(F.desc('Effective_Date'))
+                latest_records = historical_output.withColumn("rn", F.row_number().over(window_spec)) \
+                                                 .filter(F.col("rn") == 1) \
+                                                 .drop("rn")
                 
-                # If new columns exist in new_records but not in historical
-                # We need to handle this specially for append mode
-                if new_cols - existing_cols:
-                    # New columns detected - need to add them to historical schema
-                    # In append mode, we return records that will extend the schema
-                    return new_records
-                else:
-                    # No schema change - ensure column order matches
-                    return new_records.select(list(existing_cols))
+                # Get current employee data with new columns
+                current_date = datetime.now().strftime('%Y-%m-%d')
+                
+                # Create "Original/2" records from current employee_data
+                # Add tracking columns
+                original_2_records = employee_data.withColumn(
+                    'Effective_Date',
+                    F.lit(current_date).cast(DateType())
+                ).withColumn(
+                    'Note',
+                    F.lit(f"Original/2 - Added columns: {', '.join(sorted(list(new_columns)))}")
+                )
+                
+                # Add NULL values for new columns to match schema
+                for col in new_columns:
+                    if col in employee_data.columns:
+                        col_type = employee_data.schema[col].dataType
+                    else:
+                        col_type = StringType()
+                    
+                    # Add new columns to ensure schema compatibility
+                    if col not in original_2_records.columns:
+                        original_2_records = original_2_records.withColumn(col, F.lit(None).cast(col_type))
+                
+                # Return Original/2 records with APPEND mode
+                # Old records will automatically have NULL for new columns
+                return original_2_records.set_mode("append")
+                
             else:
-                # No changes detected - return empty DataFrame with existing schema
-                return historical_output.limit(0)
+                # NO SCHEMA CHANGE - Detect value changes and append
+                new_records = tracker.detect_and_append_changes(
+                    new_df=employee_data,
+                    historical_df=historical_output
+                )
+                
+                if new_records.count() > 0:
+                    # Ensure column order matches existing schema
+                    existing_cols = list(historical_output.columns)
+                    new_records = new_records.select(existing_cols)
+                    
+                    # Return with APPEND mode
+                    return new_records.set_mode("append")
+                else:
+                    # No changes - return empty DataFrame
+                    return historical_output.limit(0).set_mode("append")
         else:
-            # First run - initialize all records
-            return tracker.initialize_historical_data(employee_data)
+            # First run - initialize all records with SNAPSHOT mode
+            result = tracker.initialize_historical_data(employee_data)
+            return result.set_mode("snapshot")
             
     except Exception:
         # First run - output doesn't exist yet
-        return tracker.initialize_historical_data(employee_data)
+        result = tracker.initialize_historical_data(employee_data)
+        return result.set_mode("snapshot")
