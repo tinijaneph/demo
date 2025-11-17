@@ -243,31 +243,29 @@ class EmployeeChangeTracker:
 
 
 # ============================================================================
-# FOUNDRY TRANSFORM IMPLEMENTATION - 1 INPUT, 1 OUTPUT
+# FOUNDRY TRANSFORM IMPLEMENTATION - 1 INPUT, 1 OUTPUT WITH APPEND MODE
 # ============================================================================
 
 @transform_df(
-    Output("ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"),
+    Output("ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d", set_mode="append"),
     employee_data=Input("ri.foundry.main.dataset.26c1c4e9-6594-4001-8451-9dbc41aee364")
 )
 def compute(employee_data, ctx):
     """
-    Track employee changes with schema evolution support.
+    Track employee changes with schema evolution support using append mode.
     
-    Uses TransformOutput API to read and append to existing output.
+    With set_mode="append", this function returns ONLY new records to append.
     
-    First run: Initialize with employee_data 
-    Subsequent runs: Read existing output, detect changes, write back all records
+    First run: Initialize with all employee_data records
+    Subsequent runs: Return ONLY detected changes to append
     
     Args:
         employee_data: Current employee data (your source dataset with 10 columns)
         ctx: Transform context
         
     Returns:
-        Complete historical dataset (existing records + new changes)
+        New records to append (not full history)
     """
-    from transforms.api import TransformOutput
-    
     # Initialize tracker
     tracker = EmployeeChangeTracker(
         primary_key="Employee_ID",
@@ -275,12 +273,9 @@ def compute(employee_data, ctx):
         note_col="Note"
     )
     
-    # Access the output dataset to read existing data
-    output_dataset = ctx.get_output_dataset()
-    
-    # Check if output already has data
+    # Try to read existing historical data from output
     try:
-        # Read existing historical data from output
+        output_dataset = ctx.get_output_dataset()
         historical_output = output_dataset.dataframe()
         
         hist_count = historical_output.count()
@@ -288,40 +283,31 @@ def compute(employee_data, ctx):
                            'Note' in historical_output.columns
         
         if hist_count > 0 and has_tracking_cols:
-            # Subsequent run - detect changes
+            # Subsequent run - detect and return ONLY changes to append
             new_records = tracker.detect_and_append_changes(
                 new_df=employee_data,
                 historical_df=historical_output
             )
             
-            # Handle schema alignment for union
+            # Handle schema evolution: ensure new records match existing schema
             if new_records.count() > 0:
-                # Align schemas before union
-                hist_cols = set(historical_output.columns)
+                existing_cols = set(historical_output.columns)
                 new_cols = set(new_records.columns)
                 
-                # Add missing columns to historical with nulls
-                for col in (new_cols - hist_cols):
-                    col_type = new_records.schema[col].dataType
-                    historical_output = historical_output.withColumn(col, F.lit(None).cast(col_type))
-                
-                # Add missing columns to new records with nulls
-                for col in (hist_cols - new_cols):
-                    col_type = historical_output.schema[col].dataType
-                    new_records = new_records.withColumn(col, F.lit(None).cast(col_type))
-                
-                # Ensure same column order
-                all_cols = sorted(list(hist_cols | new_cols))
-                historical_output = historical_output.select(all_cols)
-                new_records = new_records.select(all_cols)
-                
-                # Union historical with new changes
-                return historical_output.unionByName(new_records).drop_duplicates()
+                # If new columns exist in new_records but not in historical
+                # We need to handle this specially for append mode
+                if new_cols - existing_cols:
+                    # New columns detected - need to add them to historical schema
+                    # In append mode, we return records that will extend the schema
+                    return new_records
+                else:
+                    # No schema change - ensure column order matches
+                    return new_records.select(list(existing_cols))
             else:
-                # No changes - return historical as-is
-                return historical_output
+                # No changes detected - return empty DataFrame with existing schema
+                return historical_output.limit(0)
         else:
-            # First run or empty historical - initialize
+            # First run - initialize all records
             return tracker.initialize_historical_data(employee_data)
             
     except Exception:
