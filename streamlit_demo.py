@@ -47,23 +47,29 @@ HUB_CSS = """
         z-index: 0;
     }
     
-    /* Style the container boxes as cards with borders */
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+    /* Target the specific container elements more aggressively */
+    div[data-testid="column"] > div > div[data-testid="stVerticalBlock"] {
         background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border: 2px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 20px !important;
         padding: 2.5rem 2rem !important;
         transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1) !important;
         position: relative !important;
         overflow: hidden !important;
-        min-height: 400px !important;
+        min-height: 420px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
     }
     
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"]:hover {
+    div[data-testid="column"] > div > div[data-testid="stVerticalBlock"]:hover {
         transform: translateY(-10px) !important;
-        border-color: rgba(255, 255, 255, 0.3) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
         background: rgba(255, 255, 255, 0.08) !important;
         box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6) !important;
+    }
+    
+    /* Additional targeting for nested elements */
+    div[data-testid="column"] div[data-testid="stVerticalBlock"] > div {
+        background: transparent !important;
     }
     
     /* Button styling */
@@ -83,6 +89,7 @@ HUB_CSS = """
     .stButton > button:hover {
         transform: translateX(5px) !important;
         box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4) !important;
+        background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
     }
     
     /* Responsive scaling for different screen sizes */
@@ -100,7 +107,7 @@ HUB_CSS = """
     
     @media (min-width: 1920px) {
         .landing-content-wrapper {
-            transform: scale(1.1);
+            transform: scale(1.05);
         }
     }
 </style>
