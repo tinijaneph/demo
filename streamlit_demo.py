@@ -16,23 +16,20 @@ if 'region' not in st.session_state:
 # ADD THIS - Landing Page CSS
 HUB_CSS = """
 <style>
-    /* Remove Streamlit's default padding */
-    .main .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0rem !important;
-        max-width: 100% !important;
+    /* Landing page background */
+    .stApp {
+        background: radial-gradient(ellipse at top, #2f4156 0%, #1a2942 50%, #0f1419 100%);
     }
     
     .landing-container {
-        min-height: auto;  /* Changed from 100vh */
-        background: radial-gradient(ellipse at top, #2f4156 0%, #1a2942 50%, #0f1419 100%);
-        padding: 2rem 2rem 4rem 2rem;  /* Added bottom padding */
+        padding: 3rem 0;
         position: relative;
-        margin: -1rem -1rem 0 -1rem;  /* Negative margins to extend to edges */
     }
     
     .mesh-gradient {
-        position: absolute;
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
         opacity: 0.4;
@@ -40,18 +37,19 @@ HUB_CSS = """
             radial-gradient(at 20% 30%, #567c8d 0px, transparent 50%),
             radial-gradient(at 80% 70%, #2f4156 0px, transparent 50%);
         filter: blur(80px);
+        pointer-events: none;
+        z-index: 0;
     }
     
     .landing-header {
         text-align: center;
-        margin-bottom: 3rem;  /* Reduced from 4rem */
+        margin-bottom: 3rem;
         position: relative;
         z-index: 10;
-        padding-top: 2rem;  /* Added padding at top */
     }
     
     .landing-title {
-        font-size: 3.5rem;  /* Slightly smaller for better fit */
+        font-size: 3.5rem;
         font-weight: 200;
         color: #ffffff;
         margin-bottom: 1rem;
@@ -78,112 +76,48 @@ HUB_CSS = """
         margin-top: 0.5rem;
     }
     
-    .region-grid {
-        display: flex;
-        gap: 2rem;
-        justify-content: center;
-        max-width: 900px;
-        margin: 0 auto;
-        position: relative;
-        z-index: 10;
-    }
-    
-    .region-card {
-        flex: 1;
-        max-width: 420px;
-        min-height: 320px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
-        padding: 2.5rem;
-        cursor: pointer;
-        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .region-card:hover {
-        transform: translateY(-8px);
-        border-color: rgba(255, 255, 255, 0.2);
+    /* Style Streamlit containers as cards */
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
         background: rgba(255, 255, 255, 0.05);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    }
-    
-    .icon-wrapper {
-        width: 70px;
-        height: 70px;
-        margin-bottom: 1.5rem;
-    }
-    
-    .icon-wrapper svg {
-        width: 100%;
-        height: 100%;
-        filter: drop-shadow(0 4px 20px rgba(86, 124, 141, 0.3));
-    }
-    
-    .region-title {
-        font-size: 2rem;
-        font-weight: 600;
-        color: #ffffff;
-        margin-bottom: 0.8rem;
-    }
-    
-    .region-desc {
-        font-size: 0.95rem;
-        color: #8b9db3;
-        line-height: 1.6;
-        margin-bottom: 2rem;
-    }
-    
-    .region-features {
-        list-style: none;
-        padding: 0;
-        margin-bottom: 2rem;
-    }
-    
-    .region-features li {
-        font-size: 0.85rem;
-        color: #6b7d93;
-        margin-bottom: 0.5rem;
-        padding-left: 1.2rem;
-        position: relative;
-    }
-    
-    .region-features li::before {
-        content: '▹';
-        position: absolute;
-        left: 0;
-        color: #567c8d;
-        font-weight: bold;
-    }
-    
-    .cta-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #ffffff;
-        font-size: 0.9rem;
-        font-weight: 500;
-        opacity: 0.7;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 2rem;
         transition: all 0.3s ease;
     }
     
-    .region-card:hover .cta-button {
-        opacity: 1;
-        gap: 0.8rem;
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"]:hover {
+        transform: translateY(-8px);
+        border-color: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
     }
     
-    .landing-page [data-testid="stSidebar"] {
-        display: none;
+    /* Style text on landing page */
+    .stMarkdown h3 {
+        color: #ffffff !important;
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stMarkdown p, .stMarkdown li {
+        color: #8b9db3 !important;
     }
 </style>
 """
 
 def show_landing_page():
     """Display the landing page for region selection"""
-    st.markdown(HUB_CSS, unsafe_allow_html=True)
     
-    st.markdown('<div class="landing-page">', unsafe_allow_html=True)
+    # Hide Streamlit's default header and menu
+    st.markdown("""
+        <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(HUB_CSS, unsafe_allow_html=True)
     
     st.markdown("""
     <div class="landing-container">
@@ -194,17 +128,17 @@ def show_landing_page():
             <p class="landing-subtitle">Comprehensive labor cost insights and workforce metrics</p>
             <p class="landing-prompt">Select your region to access the dashboard</p>
         </div>
-        
-        <div class="region-grid">
+    </div>
     """, unsafe_allow_html=True)
     
-    col1, col2 = st.columns(2)
+    # Create the cards using Streamlit columns
+    col1, col2 = st.columns(2, gap="large")
     
     with col1:
-        st.markdown("""
-        <div class="region-card">
-            <div class="icon-wrapper">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        with st.container():
+            st.markdown("""
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <svg width="70" height="70" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="8" y="12" width="48" height="8" rx="2" fill="#567c8d" opacity="0.8"/>
                     <rect x="8" y="22" width="48" height="8" rx="2" fill="#567c8d" opacity="0.6"/>
                     <rect x="8" y="32" width="48" height="8" rx="2" fill="#567c8d" opacity="0.4"/>
@@ -214,26 +148,26 @@ def show_landing_page():
                     <circle cx="52" cy="36" r="3" fill="#c8d9e5"/>
                 </svg>
             </div>
-            <h2 class="region-title">United States</h2>
-            <p class="region-desc">US labor cost analysis with compensation and productivity metrics</p>
-            <ul class="region-features">
-                <li>US compensation benchmarks</li>
-                <li>State-level cost analysis</li>
-                <li>Overtime tracking</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("View US Dashboard →", key="us_btn", use_container_width=True):
-            st.session_state.page = 'dashboard'
-            st.session_state.region = 'US'
-            st.rerun()
+            """, unsafe_allow_html=True)
+            
+            st.markdown("### United States")
+            st.markdown("US labor cost analysis with compensation and productivity metrics")
+            st.markdown("""
+            - US compensation benchmarks
+            - State-level cost analysis
+            - Overtime tracking
+            """)
+            
+            if st.button("View US Dashboard →", key="us_btn", use_container_width=True, type="primary"):
+                st.session_state.page = 'dashboard'
+                st.session_state.region = 'US'
+                st.rerun()
     
     with col2:
-        st.markdown("""
-        <div class="region-card">
-            <div class="icon-wrapper">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        with st.container():
+            st.markdown("""
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <svg width="70" height="70" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="8" y="8" width="48" height="48" rx="4" stroke="#567c8d" stroke-width="2" fill="none" opacity="0.3"/>
                     <path d="M16 40 L24 32 L32 36 L48 20" stroke="#c8d9e5" stroke-width="2.5" stroke-linecap="round"/>
                     <circle cx="16" cy="40" r="2.5" fill="#567c8d"/>
@@ -242,26 +176,20 @@ def show_landing_page():
                     <circle cx="48" cy="20" r="2.5" fill="#567c8d"/>
                 </svg>
             </div>
-            <h2 class="region-title">European Union</h2>
-            <p class="region-desc">EU labor cost analysis with multi-country comparisons</p>
-            <ul class="region-features">
-                <li>EU compensation standards</li>
-                <li>Multi-country analysis</li>
-                <li>Regional workforce metrics</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("View EU Dashboard →", key="eu_btn", use_container_width=True):
-            st.session_state.page = 'dashboard'
-            st.session_state.region = 'EU'
-            st.rerun()
-    
-    st.markdown("""
-        </div>
-    </div>
-    </div>
-    """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
+            
+            st.markdown("### European Union")
+            st.markdown("EU labor cost analysis with multi-country comparisons")
+            st.markdown("""
+            - EU compensation standards
+            - Multi-country analysis
+            - Regional workforce metrics
+            """)
+            
+            if st.button("View EU Dashboard →", key="eu_btn", use_container_width=True, type="primary"):
+                st.session_state.page = 'dashboard'
+                st.session_state.region = 'EU'
+                st.rerun()
 
 if st.session_state.page == 'landing':
     show_landing_page()
