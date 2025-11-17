@@ -18,12 +18,18 @@ HUB_CSS = """
 <style>
     /* Landing page background */
     .stApp {
-        background: radial-gradient(ellipse at top, #2f4156 0%, #1a2942 50%, #0f1419 100%);
+        background: radial-gradient(ellipse at top, #2f4156 0%, #1a2942 50%, #0f1419 100%) !important;
     }
     
-    .landing-container {
-        padding: 3rem 0;
-        position: relative;
+    /* Hide default Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Remove default padding */
+    .main .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
     
     .mesh-gradient {
@@ -41,66 +47,61 @@ HUB_CSS = """
         z-index: 0;
     }
     
-    .landing-header {
-        text-align: center;
-        margin-bottom: 3rem;
-        position: relative;
-        z-index: 10;
-    }
-    
-    .landing-title {
-        font-size: 3.5rem;
-        font-weight: 200;
-        color: #ffffff;
-        margin-bottom: 1rem;
-        letter-spacing: -1px;
-    }
-    
-    .landing-title strong {
-        font-weight: 600;
-        background: linear-gradient(135deg, #c8d9e5 0%, #567c8d 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    
-    .landing-subtitle {
-        font-size: 1.2rem;
-        color: #8b9db3;
-        font-weight: 300;
-        margin-bottom: 0.5rem;
-    }
-    
-    .landing-prompt {
-        font-size: 0.95rem;
-        color: #6b7d93;
-        margin-top: 0.5rem;
-    }
-    
-    /* Style Streamlit containers as cards */
+    /* Style the container boxes as cards with borders */
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 2rem;
-        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 20px !important;
+        padding: 2.5rem 2rem !important;
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        min-height: 400px !important;
     }
     
     [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"]:hover {
-        transform: translateY(-8px);
-        border-color: rgba(255, 255, 255, 0.2);
-        background: rgba(255, 255, 255, 0.08);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transform: translateY(-10px) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6) !important;
     }
     
-    /* Style text on landing page */
-    .stMarkdown h3 {
-        color: #ffffff !important;
-        font-size: 2rem;
-        margin-bottom: 1rem;
+    /* Button styling */
+    .stButton > button {
+        width: 100%;
+        background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1.5rem !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        margin-top: 1.5rem !important;
     }
     
-    .stMarkdown p, .stMarkdown li {
-        color: #8b9db3 !important;
+    .stButton > button:hover {
+        transform: translateX(5px) !important;
+        box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4) !important;
+    }
+    
+    /* Responsive scaling for different screen sizes */
+    @media (max-width: 1440px) {
+        .landing-content-wrapper {
+            transform: scale(0.9);
+        }
+    }
+    
+    @media (max-width: 1280px) {
+        .landing-content-wrapper {
+            transform: scale(0.8);
+        }
+    }
+    
+    @media (min-width: 1920px) {
+        .landing-content-wrapper {
+            transform: scale(1.1);
+        }
     }
 </style>
 """
@@ -111,45 +112,35 @@ def show_landing_page():
     # Apply the landing page CSS
     st.markdown(HUB_CSS, unsafe_allow_html=True)
     
-    # Hide Streamlit's default elements
-    st.markdown("""
-        <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-        </style>
-    """, unsafe_allow_html=True)
+    # Background gradient div
+    st.markdown('<div class="mesh-gradient"></div>', unsafe_allow_html=True)
     
-    # Render the header and gradient background
-    st.markdown("""
-    <div class="landing-container">
-        <div class="mesh-gradient"></div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Wrapper for responsive scaling
+    st.markdown('<div class="landing-content-wrapper">', unsafe_allow_html=True)
     
-    # Title and subtitle using Streamlit native components
+    # Title and subtitle
     st.markdown("""
-    <div style="text-align: center; margin-bottom: 3rem; position: relative; z-index: 10;">
-        <h1 style="font-size: 3.5rem; font-weight: 200; color: #ffffff; margin-bottom: 1rem;">
-            Workforce <strong style="font-weight: 600; background: linear-gradient(135deg, #c8d9e5 0%, #567c8d 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Analytics</strong>
+    <div style="text-align: center; margin-bottom: 4rem; position: relative; z-index: 10;">
+        <h1 style="font-size: 4rem; font-weight: 200; color: #ffffff; margin-bottom: 1rem; letter-spacing: -1px;">
+            Workforce <strong style="font-weight: 600; background: linear-gradient(135deg, #c8d9e5 0%, #567c8d 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Analytics</strong>
         </h1>
-        <p style="font-size: 1.2rem; color: #8b9db3; margin-bottom: 0.5rem;">
+        <p style="font-size: 1.2rem; color: #8b9db3; font-weight: 300; margin-bottom: 0.5rem;">
             Comprehensive labor cost insights and workforce metrics
         </p>
-        <p style="font-size: 0.95rem; color: #6b7d93;">
+        <p style="font-size: 1rem; color: #6b7d93;">
             Select your region to access the dashboard
         </p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Create two columns for the region cards
-    col1, col2 = st.columns(2, gap="large")
+    # Create two columns with more spacing
+    col1, col2 = st.columns([1, 1], gap="large")
     
     with col1:
         with st.container():
             st.markdown("""
-            <div style="text-align: center; margin-bottom: 1.5rem;">
-                <svg width="70" height="70" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="8" y="12" width="48" height="8" rx="2" fill="#567c8d" opacity="0.8"/>
                     <rect x="8" y="22" width="48" height="8" rx="2" fill="#567c8d" opacity="0.6"/>
                     <rect x="8" y="32" width="48" height="8" rx="2" fill="#567c8d" opacity="0.4"/>
@@ -161,17 +152,18 @@ def show_landing_page():
             </div>
             """, unsafe_allow_html=True)
             
-            st.markdown("<h3 style='color: #ffffff; font-size: 2rem; margin-bottom: 1rem;'>United States</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='color: #8b9db3; margin-bottom: 1.5rem;'>US labor cost analysis with compensation and productivity metrics</p>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color: #ffffff; font-size: 2.2rem; font-weight: 600; margin-bottom: 1rem; text-align: center;'>United States</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #8b9db3; font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: center;'>US labor cost analysis with compensation and productivity metrics</p>", unsafe_allow_html=True)
+            
             st.markdown("""
-            <ul style='color: #6b7d93; list-style: none; padding-left: 0;'>
-                <li style='margin-bottom: 0.5rem;'>▹ US compensation benchmarks</li>
-                <li style='margin-bottom: 0.5rem;'>▹ State-level cost analysis</li>
-                <li style='margin-bottom: 0.5rem;'>▹ Overtime tracking</li>
-            </ul>
+            <div style='color: #6b7d93; font-size: 0.9rem; margin-bottom: 2rem;'>
+                <div style='margin-bottom: 0.6rem; padding-left: 1rem;'>▹ US compensation benchmarks</div>
+                <div style='margin-bottom: 0.6rem; padding-left: 1rem;'>▹ State-level cost analysis</div>
+                <div style='margin-bottom: 0.6rem; padding-left: 1rem;'>▹ Overtime tracking</div>
+            </div>
             """, unsafe_allow_html=True)
             
-            if st.button("View US Dashboard →", key="us_btn", use_container_width=True, type="primary"):
+            if st.button("View US Dashboard →", key="us_btn", use_container_width=True):
                 st.session_state.page = 'dashboard'
                 st.session_state.region = 'US'
                 st.rerun()
@@ -179,8 +171,8 @@ def show_landing_page():
     with col2:
         with st.container():
             st.markdown("""
-            <div style="text-align: center; margin-bottom: 1.5rem;">
-                <svg width="70" height="70" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <svg width="80" height="80" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="8" y="8" width="48" height="48" rx="4" stroke="#567c8d" stroke-width="2" fill="none" opacity="0.3"/>
                     <path d="M16 40 L24 32 L32 36 L48 20" stroke="#c8d9e5" stroke-width="2.5" stroke-linecap="round"/>
                     <circle cx="16" cy="40" r="2.5" fill="#567c8d"/>
@@ -191,20 +183,23 @@ def show_landing_page():
             </div>
             """, unsafe_allow_html=True)
             
-            st.markdown("<h3 style='color: #ffffff; font-size: 2rem; margin-bottom: 1rem;'>European Union</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='color: #8b9db3; margin-bottom: 1.5rem;'>EU labor cost analysis with multi-country comparisons</p>", unsafe_allow_html=True)
+            st.markdown("<h2 style='color: #ffffff; font-size: 2.2rem; font-weight: 600; margin-bottom: 1rem; text-align: center;'>European Union</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='color: #8b9db3; font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem; text-align: center;'>EU labor cost analysis with multi-country comparisons</p>", unsafe_allow_html=True)
+            
             st.markdown("""
-            <ul style='color: #6b7d93; list-style: none; padding-left: 0;'>
-                <li style='margin-bottom: 0.5rem;'>▹ EU compensation standards</li>
-                <li style='margin-bottom: 0.5rem;'>▹ Multi-country analysis</li>
-                <li style='margin-bottom: 0.5rem;'>▹ Regional workforce metrics</li>
-            </ul>
+            <div style='color: #6b7d93; font-size: 0.9rem; margin-bottom: 2rem;'>
+                <div style='margin-bottom: 0.6rem; padding-left: 1rem;'>▹ EU compensation standards</div>
+                <div style='margin-bottom: 0.6rem; padding-left: 1rem;'>▹ Multi-country analysis</div>
+                <div style='margin-bottom: 0.6rem; padding-left: 1rem;'>▹ Regional workforce metrics</div>
+            </div>
             """, unsafe_allow_html=True)
             
-            if st.button("View EU Dashboard →", key="eu_btn", use_container_width=True, type="primary"):
+            if st.button("View EU Dashboard →", key="eu_btn", use_container_width=True):
                 st.session_state.page = 'dashboard'
                 st.session_state.region = 'EU'
                 st.rerun()
+    
+    st.markdown('</div>', unsafe_allow_html=True)  # Close landing-content-wrapper
 
 if st.session_state.page == 'landing':
     show_landing_page()
