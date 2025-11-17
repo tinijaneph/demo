@@ -283,7 +283,7 @@ def compute(employee_data, ctx):
     """
     Track employee changes with schema evolution support.
     
-    Uses incremental mode: reads previous output, compares with new input, writes combined result.
+    Uses Foundry's previous output to maintain history across runs.
     
     First run: Initialize with employee_data 
     Subsequent runs: Track changes between employee_data and previous output
@@ -295,47 +295,50 @@ def compute(employee_data, ctx):
     Returns:
         Updated historical dataset with all changes tracked
     """
-    # Initialize tracker with your primary key
+    from pyspark.sql.utils import AnalysisException
+    
+    # Initialize tracker
     tracker = EmployeeChangeTracker(
         primary_key="Employee_ID",
         effective_date_col="Effective_Date",
         note_col="Note"
     )
     
+    # Try to read the previous output of this transform
+    previous_output = None
+    is_first_run = True
+    
     try:
-        # Try to read previous output (historical data)
-        previous_output = ctx.spark_session.read.format("foundry").load(
-            "ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"
+        # Read previous output before it gets overwritten
+        output_rid = "ri.foundry.main.dataset.68d6dc4a-705d-4fcd-97cb-9bdbebe6384d"
+        previous_output = ctx.spark_session.read.format("foundry").load(output_rid)
+        
+        # Verify it has data and tracking columns
+        if previous_output.count() > 0 and \
+           'Effective_Date' in previous_output.columns and \
+           'Note' in previous_output.columns:
+            is_first_run = False
+            
+    except (AnalysisException, Exception):
+        # First run - previous output doesn't exist
+        is_first_run = True
+    
+    # Process based on run type
+    if is_first_run:
+        # First run - initialize all records
+        output_df = tracker.initialize_historical_data(employee_data)
+    else:
+        # Subsequent run - track changes
+        output_df = tracker.track_changes(
+            new_df=employee_data,
+            historical_df=previous_output
         )
         
-        hist_count = previous_output.count()
-        has_tracking_cols = 'Effective_Date' in previous_output.columns and \
-                           'Note' in previous_output.columns
-        
-        if hist_count == 0 or not has_tracking_cols:
-            # First initialization - this is your first run
-            print("Initializing historical tracking - First run")
-            output_df = tracker.initialize_historical_data(employee_data)
-        else:
-            # Track changes - compare current data with previous output
-            print(f"Tracking changes - Historical records: {hist_count}")
-            output_df = tracker.track_changes(
-                new_df=employee_data,
-                historical_df=previous_output
-            )
-            
-            # Apply date filtering rules (keep month-end and latest date)
-            output_df = tracker.filter_by_date_rules(
-                output_df,
-                keep_latest=True,
-                keep_month_end=True
-            )
-            
-            print(f"Output records after tracking: {output_df.count()}")
-            
-    except Exception as e:
-        # First run or error reading previous output - initialize fresh
-        print(f"Initializing (first run or error): {e}")
-        output_df = tracker.initialize_historical_data(employee_data)
+        # Apply date filtering rules
+        output_df = tracker.filter_by_date_rules(
+            output_df,
+            keep_latest=True,
+            keep_month_end=True
+        )
     
     return output_df.drop_duplicates()
